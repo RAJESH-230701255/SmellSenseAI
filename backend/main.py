@@ -10,7 +10,7 @@ from datetime import datetime
 
 app = FastAPI()
 
-# ✅ CORS (for frontend)
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,15 +22,18 @@ app.add_middleware(
 # Load ONNX model
 session = ort.InferenceSession("model/model.onnx")
 
+
 def preprocess(image):
     image = cv2.resize(image, (224, 224))
     image = image / 255.0
     image = np.expand_dims(image.astype(np.float32), axis=0)
     return image
 
+
 @app.get("/")
 def home():
     return {"message": "Food Freshness API is running 🚀"}
+
 
 @app.post("/predict")
 async def predict(
@@ -38,10 +41,11 @@ async def predict(
     text: Optional[str] = Form(""),
     expiry_date: Optional[str] = Form("")
 ):
+
     pred = None
     result = "Unknown"
 
-    # 🖼️ IMAGE PREDICTION
+    # Image Prediction
     if file:
         contents = await file.read()
         image = Image.open(io.BytesIO(contents)).convert("RGB")
@@ -53,7 +57,7 @@ async def predict(
 
         print("Prediction:", pred)
 
-        # 🔥 FINAL THRESHOLD LOGIC
+        # Fresh / Spoiled
         if pred < 0.5:
             result = "Fresh"
         else:
@@ -61,16 +65,17 @@ async def predict(
 
         print("Final Result:", result)
 
-    # ❗ No input case
+    # No input
     if not file and not text and not expiry_date:
         return {"error": "Provide at least one input"}
 
-    # 📝 TEXT ADJUSTMENT
+    # Text Adjustment
     bad_words = ["rotten", "smell", "mushy", "black", "fungus"]
+
     if text and any(word in text.lower() for word in bad_words):
         result = "Spoiled"
 
-    # 📅 EXPIRY ADJUSTMENT
+    # Expiry Date Adjustment
     if expiry_date:
         try:
             exp = datetime.strptime(expiry_date, "%Y-%m-%d")
@@ -79,19 +84,17 @@ async def predict(
         except:
             pass
 
+    # Score Calculation
+    score = None
+
+    if pred is not None:
+        if result == "Fresh":
+            score = round((1 - float(pred)) * 100, 2)
+        else:
+            score = round(float(pred) * 100, 2)
+
     return {
-        # Calculate score from model confidence
-score = None
-
-if pred is not None:
-    if result == "Fresh":
-        score = round((1 - float(pred)) * 100, 2)
-    else:
-        score = round(float(pred) * 100, 2)
-
-return {
-    "result": result,
-    "score": score,
-    "confidence": float(pred) if pred is not None else None
-}
-}
+        "result": result,
+        "score": score,
+        "confidence": float(pred) if pred is not None else None
+    }
