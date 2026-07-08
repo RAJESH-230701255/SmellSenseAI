@@ -7,33 +7,28 @@ __pycache__/
 
 # Machine Learning models
 *.h5
-*.onnx
+
+# Keep the ONNX model
+!backend/model/model.onnx
+
+# Ignore only the DistilBERT model downloaded from Hugging Face
+backend/model/distilbert/
 
 # VS Code settings
 .vscode/
 
-#dataset
+# Dataset
 dataset/
 
-# OS files
-.DS_Store
-Thumbs.db
-
-# Ignore backend model folder (downloaded from Hugging Face)
-backend/model/
-
-# Ignore training files
+# Training files
 model_training/
-
-# Python virtual environment
-venv/
-
-# Python cache
-__pycache__/
-*.pyc
 
 # Node modules
 node_modules/
 
 # Environment variables
 .env
+
+# OS files
+.DS_Store
+Thumbs.db
