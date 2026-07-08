@@ -40,14 +40,24 @@ image_session = ort.InferenceSession(MODEL_PATH)
 # DISTILBERT MODEL
 # -------------------------------------------------
 
-text_classifier = pipeline(
-    "text-classification",
-    model="Rajesh282002/smellsense-distilbert",
-    tokenizer="Rajesh282002/smellsense-distilbert",
-    token=os.getenv("HF_TOKEN")
-)
+text_classifier = None
 
-print("✅ DistilBERT Loaded Successfully!")
+def get_text_classifier():
+    global text_classifier
+
+    if text_classifier is None:
+        print("Loading DistilBERT...")
+
+        text_classifier = pipeline(
+            "text-classification",
+            model="Rajesh282002/smellsense-distilbert",
+            tokenizer="Rajesh282002/smellsense-distilbert",
+            token=os.getenv("HF_TOKEN")
+        )
+
+        print("✅ DistilBERT Loaded!")
+
+    return text_classifier
 
 # -------------------------------------------------
 # IMAGE PREPROCESS
@@ -134,7 +144,8 @@ async def predict(
     # TEXT
     # =============================================
 
-    prediction = text_classifier(text)[0]
+    classifier = get_text_classifier()
+    prediction = classifier(text)[0]
 
     print(prediction)
 
