@@ -1,16 +1,23 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
+
 import numpy as np
 import cv2
 import onnxruntime as ort
 from PIL import Image
 import io
+
 from datetime import datetime
+
+from transformers import pipeline
 
 app = FastAPI()
 
+# -------------------------------------------------
 # CORS
+# -------------------------------------------------
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,82 +26,205 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load ONNX model
-session = ort.InferenceSession("model/model.onnx")
+# -------------------------------------------------
+# IMAGE MODEL
+# -------------------------------------------------
 
+image_session = ort.InferenceSession("model/model.onnx")
+
+# -------------------------------------------------
+# DISTILBERT MODEL
+# -------------------------------------------------
+
+text_classifier = pipeline(
+    "text-classification",
+    model="Rajesh282002/smellsense-distilbert",
+    tokenizer="Rajesh282002/smellsense-distilbert"
+)
+
+print("✅ DistilBERT Loaded Successfully!")
+
+# -------------------------------------------------
+# IMAGE PREPROCESS
+# -------------------------------------------------
 
 def preprocess(image):
+
     image = cv2.resize(image, (224, 224))
-    image = image / 255.0
-    image = np.expand_dims(image.astype(np.float32), axis=0)
+    image = image.astype(np.float32) / 255.0
+    image = np.expand_dims(image, axis=0)
+
     return image
 
 
+# -------------------------------------------------
+# HOME
+# -------------------------------------------------
+
 @app.get("/")
 def home():
-    return {"message": "Food Freshness API is running 🚀"}
 
+    return {
+        "message": "Food Freshness API is running 🚀"
+    }
+
+
+# -------------------------------------------------
+# IMAGE + TEXT PREDICTION
+# -------------------------------------------------
 
 @app.post("/predict")
 async def predict(
+
     file: Optional[UploadFile] = File(None),
-    text: Optional[str] = Form(""),
-    expiry_date: Optional[str] = Form("")
+    text: Optional[str] = Form("")
+
 ):
 
-    pred = None
-    result = "Unknown"
+    if not file and not text:
 
-    # Image Prediction
+        return {
+            "error": "Provide either an image or text."
+        }
+
+    # =============================================
+    # IMAGE
+    # =============================================
+
     if file:
+
         contents = await file.read()
+
         image = Image.open(io.BytesIO(contents)).convert("RGB")
         image = np.array(image)
 
         input_data = preprocess(image)
 
-        pred = session.run(None, {"args_0:0": input_data})[0][0][0]
+        prediction = image_session.run(
+            None,
+            {"args_0:0": input_data}
+        )[0][0][0]
 
-        print("Prediction:", pred)
+        print("Image Prediction :", prediction)
 
-        # Fresh / Spoiled
-        if pred < 0.5:
+        if prediction < 0.5:
+
             result = "Fresh"
+            confidence = (1 - float(prediction)) * 100
+
         else:
+
             result = "Spoiled"
+            confidence = float(prediction) * 100
 
-        print("Final Result:", result)
+        return {
 
-    # No input
-    if not file and not text and not expiry_date:
-        return {"error": "Provide at least one input"}
+            "result": result,
+            "confidence": round(confidence, 2),
+            "score": round(confidence, 2)
 
-    # Text Adjustment
-    bad_words = ["rotten", "smell", "mushy", "black", "fungus"]
+        }
 
-    if text and any(word in text.lower() for word in bad_words):
+    # =============================================
+    # TEXT
+    # =============================================
+
+    prediction = text_classifier(text)[0]
+
+    print(prediction)
+
+    if prediction["label"] == "LABEL_0":
+
+        result = "Fresh"
+
+    else:
+
         result = "Spoiled"
 
-    # Expiry Date Adjustment
-    if expiry_date:
-        try:
-            exp = datetime.strptime(expiry_date, "%Y-%m-%d")
-            if datetime.now() > exp:
-                result = "Spoiled"
-        except:
-            pass
-
-    # Score Calculation
-    score = None
-
-    if pred is not None:
-        if result == "Fresh":
-            score = round((1 - float(pred)) * 100, 2)
-        else:
-            score = round(float(pred) * 100, 2)
+    confidence = prediction["score"] * 100
 
     return {
+
         "result": result,
-        "score": score,
-        "confidence": float(pred) if pred is not None else None
+        "confidence": round(confidence, 2),
+        "score": round(confidence, 2)
+
     }
+
+
+# -------------------------------------------------
+# EXPIRY DATE PREDICTION
+# -------------------------------------------------
+
+@app.post("/predict-expiry")
+async def predict_expiry(
+
+    product_name: str = Form(...),
+    manufacturing_date: str = Form(...),
+    expiry_date: str = Form(...)
+
+):
+
+    try:
+
+        today = datetime.now().date()
+
+        mfg = datetime.strptime(
+            manufacturing_date,
+            "%Y-%m-%d"
+        ).date()
+
+        exp = datetime.strptime(
+            expiry_date,
+            "%Y-%m-%d"
+        ).date()
+
+        if exp <= mfg:
+
+            return {
+                "error": "Expiry date must be after manufacturing date."
+            }
+
+        total_shelf_life = (exp - mfg).days
+
+        remaining_days = (exp - today).days
+
+        freshness_score = max(
+            0,
+            min(
+                100,
+                (remaining_days / total_shelf_life) * 100
+            )
+        )
+
+        if remaining_days < 0:
+
+            result = "Spoiled"
+
+        elif freshness_score <= 20:
+
+            result = "Near Expiry"
+
+        else:
+
+            result = "Fresh"
+
+        return {
+
+            "product": product_name,
+
+            "result": result,
+
+            "freshness_score": round(freshness_score, 2),
+
+            "remaining_days": remaining_days,
+
+            "total_shelf_life": total_shelf_life
+
+        }
+
+    except Exception as e:
+
+        return {
+            "error": str(e)
+        }

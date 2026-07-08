@@ -1,0 +1,189 @@
+.form-container{
+
+    color:white;
+
+}
+
+.form-container h2{
+
+    font-size:38px;
+
+    margin-bottom:10px;
+
+}
+
+.form-container p{
+
+    color:#94A3B8;
+
+    margin-bottom:35px;
+
+}
+
+.upload-box{
+
+    height:300px;
+
+    border:3px dashed #14B8A6;
+
+    border-radius:25px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    justify-content:center;
+
+    align-items:center;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+.upload-box:hover{
+
+    background:#263548;
+
+    border-color:#22C55E;
+
+}
+
+.upload-icon{
+
+    font-size:80px;
+
+    color:#14B8A6;
+
+    margin-bottom:20px;
+
+}
+
+.upload-box h3{
+
+    margin-bottom:12px;
+
+}
+
+.upload-box span{
+
+    color:#CBD5E1;
+
+}
+
+.upload-box small{
+
+    margin-top:12px;
+
+    color:#64748B;
+
+}
+
+.selected-file{
+
+    margin-top:25px;
+
+    margin-bottom:25px;
+
+    color:#CBD5E1;
+
+}
+
+.analyze-btn{
+
+    width:100%;
+
+    height:55px;
+
+    border:none;
+
+    border-radius:15px;
+
+    background:#14B8A6;
+
+    color:white;
+
+    font-size:18px;
+
+    cursor:pointer;
+
+}
+
+.preview-box{
+
+    margin-top:25px;
+
+    margin-bottom:25px;
+
+    display:flex;
+
+    justify-content:center;
+
+}
+
+.preview-box img{
+
+    width:260px;
+
+    height:260px;
+
+    object-fit:cover;
+
+    border-radius:20px;
+
+    border:3px solid #14B8A6;
+
+}
+
+.result-box{
+
+    margin-top:30px;
+
+    background:#263548;
+
+    border-radius:15px;
+
+    padding:20px;
+
+    color:white;
+
+}
+
+.result-box h3{
+
+    margin-bottom:15px;
+
+}
+
+.text-box{
+
+    width:100%;
+
+    min-height:220px;
+
+    border:none;
+
+    outline:none;
+
+    border-radius:15px;
+
+    padding:20px;
+
+    font-size:16px;
+
+    resize:none;
+
+    margin-bottom:25px;
+
+    background:#263548;
+
+    color:white;
+
+}
+
+.text-box::placeholder{
+
+    color:#94A3B8;
+
+}

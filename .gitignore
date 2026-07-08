@@ -18,3 +18,22 @@ dataset/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Ignore backend model folder (downloaded from Hugging Face)
+backend/model/
+
+# Ignore training files
+model_training/
+
+# Python virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Node modules
+node_modules/
+
+# Environment variables
+.env

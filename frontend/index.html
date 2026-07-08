@@ -1,45 +1,13 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Food Freshness AI</title>
-</head>
-<body>
-
-<h2>Food Freshness Detection</h2>
-
-<form id="form">
-    <input type="file" id="image" required><br><br>
-
-    <input type="text" id="text" placeholder="Enter description"><br><br>
-
-    <input type="date" id="expiry"><br><br>
-
-    <button type="submit">Check Freshness</button>
-</form>
-
-<h3 id="result"></h3>
-
-<script>
-document.getElementById("form").addEventListener("submit", async function(e) {
-    e.preventDefault();
-
-    let formData = new FormData();
-    formData.append("file", document.getElementById("image").files[0]);
-    formData.append("text", document.getElementById("text").value);
-    formData.append("expiry_date", document.getElementById("expiry").value);
-
-    let response = await fetch("http://127.0.0.1:8000/predict", {
-        method: "POST",
-        body: formData
-    });
-
-    let data = await response.json();
-
-    document.getElementById("result").innerText = 
-        "Result: " + data.result + 
-        " | Score: " + data.score;
-});
-</script>
-
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frontend</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

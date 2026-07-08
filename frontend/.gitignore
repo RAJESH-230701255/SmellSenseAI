@@ -1,0 +1,64 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Training files
+model_training/
+
+# Large Hugging Face model files
+backend/model/distilbert/model.safetensors
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Environment
+venv/
+.env
+
+# Hugging Face model
+backend/model/distilbert/model.safetensors
+
+# Hugging Face Git LFS metadata
+backend/model/distilbert/.gitattributes
+
+# Training files
+model_training/
+
+# Hugging Face model files
+backend/model/distilbert/
+
+# Training data
+model_training/
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/

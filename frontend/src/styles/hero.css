@@ -1,0 +1,59 @@
+.hero{
+
+    min-height:85vh;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    padding:80px;
+
+    background:#0F172A;
+
+    color:white;
+
+}
+
+.hero-left{
+
+    width:55%;
+
+}
+
+.hero-left h1{
+
+    font-size:65px;
+
+    line-height:1.2;
+
+}
+
+.hero-left p{
+
+    margin-top:80px;
+
+    font-size:22px;
+
+    color:#CBD5E1;
+
+}
+
+
+
+
+.hero-right{
+    flex:1;
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    overflow:hidden;
+}
+
+.hero-cartoon{
+    width: 125%;
+    max-width: 650px;
+    height: auto;
+    object-fit: contain;
+}
