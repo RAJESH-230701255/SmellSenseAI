@@ -7,6 +7,7 @@ import cv2
 import onnxruntime as ort
 from PIL import Image
 import io
+import os
 
 from datetime import datetime
 
@@ -30,7 +31,10 @@ app.add_middleware(
 # IMAGE MODEL
 # -------------------------------------------------
 
-image_session = ort.InferenceSession("model/model.onnx")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "model", "model.onnx")
+
+image_session = ort.InferenceSession(MODEL_PATH)
 
 # -------------------------------------------------
 # DISTILBERT MODEL
@@ -39,7 +43,8 @@ image_session = ort.InferenceSession("model/model.onnx")
 text_classifier = pipeline(
     "text-classification",
     model="Rajesh282002/smellsense-distilbert",
-    tokenizer="Rajesh282002/smellsense-distilbert"
+    tokenizer="Rajesh282002/smellsense-distilbert",
+    token=os.getenv("HF_TOKEN")
 )
 
 print("✅ DistilBERT Loaded Successfully!")
