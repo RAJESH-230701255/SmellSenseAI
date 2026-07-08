@@ -8,10 +8,25 @@ import onnxruntime as ort
 from PIL import Image
 import io
 import os
+import requests
 
 from datetime import datetime
 
-from transformers import pipeline
+# -------------------------------------------------
+# HUGGING FACE API
+# -------------------------------------------------
+
+HF_TOKEN = os.getenv("HF_TOKEN")
+
+API_URL = "https://api-inference.huggingface.co/models/Rajesh282002/smellsense-distilbert"
+
+HEADERS = {
+    "Authorization": f"Bearer {HF_TOKEN}"
+}
+
+# -------------------------------------------------
+# FASTAPI
+# -------------------------------------------------
 
 app = FastAPI()
 
@@ -35,29 +50,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "model", "model.onnx")
 
 image_session = ort.InferenceSession(MODEL_PATH)
-
-# -------------------------------------------------
-# DISTILBERT MODEL
-# -------------------------------------------------
-
-text_classifier = None
-
-def get_text_classifier():
-    global text_classifier
-
-    if text_classifier is None:
-        print("Loading DistilBERT...")
-
-        text_classifier = pipeline(
-            "text-classification",
-            model="Rajesh282002/smellsense-distilbert",
-            tokenizer="Rajesh282002/smellsense-distilbert",
-            token=os.getenv("HF_TOKEN")
-        )
-
-        print("✅ DistilBERT Loaded!")
-
-    return text_classifier
 
 # -------------------------------------------------
 # IMAGE PREPROCESS
@@ -103,7 +95,7 @@ async def predict(
         }
 
     # =============================================
-    # IMAGE
+    # IMAGE PREDICTION
     # =============================================
 
     if file:
@@ -120,7 +112,7 @@ async def predict(
             {"args_0:0": input_data}
         )[0][0][0]
 
-        print("Image Prediction :", prediction)
+        print("Image Prediction:", prediction)
 
         if prediction < 0.5:
 
@@ -141,11 +133,24 @@ async def predict(
         }
 
     # =============================================
-    # TEXT
+    # TEXT PREDICTION (Hugging Face API)
     # =============================================
 
-    classifier = get_text_classifier()
-    prediction = classifier(text)[0]
+    response = requests.post(
+        API_URL,
+        headers=HEADERS,
+        json={
+            "inputs": text
+        }
+    )
+
+    if response.status_code != 200:
+
+        return {
+            "error": response.json()
+        }
+
+    prediction = response.json()[0]
 
     print(prediction)
 
@@ -228,13 +233,9 @@ async def predict_expiry(
         return {
 
             "product": product_name,
-
             "result": result,
-
             "freshness_score": round(freshness_score, 2),
-
             "remaining_days": remaining_days,
-
             "total_shelf_life": total_shelf_life
 
         }

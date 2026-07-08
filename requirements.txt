@@ -5,6 +5,5 @@ numpy
 opencv-python-headless
 onnxruntime
 pillow
-transformers
-torch
+requests
 huggingface_hub
