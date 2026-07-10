@@ -29,7 +29,7 @@ export default async function handler(req, res) {
 
     // Your Hugging Face DistilBERT model
     const API_URL =
-      "https://api-inference.huggingface.co/models/Rajesh282002/smellsense-distilbert";
+    "https://router.huggingface.co/hf-inference/models/Rajesh282002/smellsense-distilbert";
 
     // Call Hugging Face Inference API
     const response = await fetch(API_URL, {
