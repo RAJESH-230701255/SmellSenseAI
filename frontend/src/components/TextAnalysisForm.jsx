@@ -1,5 +1,4 @@
 import { useState } from "react";
-import api from "../api/api";
 import "../styles/form.css";
 
 function TextAnalysisForm() {
@@ -18,18 +17,33 @@ function TextAnalysisForm() {
         try {
 
             setLoading(true);
+            setResult(null);
 
-            const formData = new FormData();
-            formData.append("text", text);
+            const response = await fetch("/api/predict-text", {
+                method: "POST",
 
-            const response = await api.post("/predict", formData);
+                headers: {
+                    "Content-Type": "application/json"
+                },
 
-            setResult(response.data);
+                body: JSON.stringify({
+                    text: text
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.error("Prediction error:", data);
+                throw new Error(data.error || "Prediction failed");
+            }
+
+            setResult(data);
 
         } catch (err) {
 
-            console.error(err);
-            alert("Prediction Failed");
+            console.error("Text analysis error:", err);
+            alert("Prediction Failed: " + err.message);
 
         } finally {
 
@@ -59,6 +73,7 @@ function TextAnalysisForm() {
             <button
                 className="analyze-btn"
                 onClick={handleAnalyze}
+                disabled={loading}
             >
                 {loading ? "Analyzing..." : "Analyze"}
             </button>
@@ -74,16 +89,19 @@ function TextAnalysisForm() {
                     </p>
 
                     <p>
-                        <strong>Confidence:</strong> {result.confidence}
+                        <strong>Confidence:</strong> {result.confidence}%
                     </p>
 
                     <p>
-                        <strong>Score:</strong> {result.score}
+                        <strong>Score:</strong> {result.score}%
                     </p>
 
-                    <p>
-                        <strong>Recommendation:</strong> {result.recommendation}
-                    </p>
+                    {result.recommendation && (
+                        <p>
+                            <strong>Recommendation:</strong>{" "}
+                            {result.recommendation}
+                        </p>
+                    )}
 
                 </div>
 
