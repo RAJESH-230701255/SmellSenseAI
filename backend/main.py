@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from transformers import AutoTokenizer
+from huggingface_hub import hf_hub_download
 
 import numpy as np
 import cv2
@@ -57,6 +58,11 @@ MODEL_PATH = os.path.join(
 print("Loading image ONNX model...")
 print("Image model path:", MODEL_PATH)
 
+if not os.path.isfile(MODEL_PATH):
+    raise FileNotFoundError(
+        f"Image ONNX model not found: {MODEL_PATH}"
+    )
+
 image_session = ort.InferenceSession(
     MODEL_PATH,
     providers=["CPUExecutionProvider"]
@@ -66,7 +72,7 @@ print("Image ONNX model loaded successfully!")
 
 
 # =================================================
-# TEXT MODEL PATHS
+# TEXT TOKENIZER DIRECTORY
 # =================================================
 
 TEXT_MODEL_DIR = os.path.join(
@@ -76,27 +82,11 @@ TEXT_MODEL_DIR = os.path.join(
     "distilbert_onnx"
 )
 
-TEXT_ONNX_PATH = os.path.join(
-    TEXT_MODEL_DIR,
-    "model.onnx"
-)
-
-print("Text model directory:", TEXT_MODEL_DIR)
-print("Text ONNX path:", TEXT_ONNX_PATH)
-
-
-# =================================================
-# VERIFY TEXT MODEL FILES
-# =================================================
+print("Text tokenizer directory:", TEXT_MODEL_DIR)
 
 if not os.path.isdir(TEXT_MODEL_DIR):
     raise FileNotFoundError(
-        f"Text model directory not found: {TEXT_MODEL_DIR}"
-    )
-
-if not os.path.isfile(TEXT_ONNX_PATH):
-    raise FileNotFoundError(
-        f"Text ONNX model not found: {TEXT_ONNX_PATH}"
+        f"Text tokenizer directory not found: {TEXT_MODEL_DIR}"
     )
 
 
@@ -104,21 +94,35 @@ if not os.path.isfile(TEXT_ONNX_PATH):
 # LOAD TEXT TOKENIZER
 # =================================================
 
-print("Loading tokenizer...")
+print("Loading text tokenizer...")
 
 tokenizer = AutoTokenizer.from_pretrained(
     TEXT_MODEL_DIR,
     local_files_only=True
 )
 
-print("Tokenizer loaded successfully!")
+print("Text tokenizer loaded successfully!")
+
+
+# =================================================
+# DOWNLOAD TEXT ONNX MODEL FROM HUGGING FACE
+# =================================================
+
+print("Downloading/loading text ONNX model from Hugging Face...")
+
+TEXT_ONNX_PATH = hf_hub_download(
+    repo_id="Rajesh282002/smellsense-distilbert",
+    filename="model.onnx"
+)
+
+print("Text ONNX model path:", TEXT_ONNX_PATH)
 
 
 # =================================================
 # LOAD TEXT ONNX MODEL
 # =================================================
 
-print("Loading text ONNX model...")
+print("Loading text ONNX model into ONNX Runtime...")
 
 text_session = ort.InferenceSession(
     TEXT_ONNX_PATH,
@@ -129,7 +133,7 @@ print("Text ONNX model loaded successfully!")
 
 
 # =================================================
-# DEBUG: PRINT ONNX INPUTS AND OUTPUTS
+# DEBUG: PRINT TEXT MODEL INPUTS AND OUTPUTS
 # =================================================
 
 print("\nText model inputs:")
@@ -267,7 +271,7 @@ async def predict(
 
             input_data = preprocess(image)
 
-            # Get actual image model input name
+            # Automatically get actual image model input name
             image_input_name = image_session.get_inputs()[0].name
 
             prediction_output = image_session.run(
@@ -326,6 +330,7 @@ async def predict(
             print("\nReceived text:")
             print(cleaned_text)
 
+
             # -------------------------------------
             # TOKENIZE TEXT
             # -------------------------------------
@@ -367,7 +372,6 @@ async def predict(
                     encoded[input_name]
                 )
 
-                # Most transformer ONNX models use int64
                 if "int64" in model_input.type:
 
                     input_array = input_array.astype(
@@ -387,6 +391,28 @@ async def predict(
                 "ONNX input keys:",
                 list(onnx_inputs.keys())
             )
+
+
+            # -------------------------------------
+            # VERIFY ALL REQUIRED INPUTS EXIST
+            # -------------------------------------
+
+            required_inputs = {
+                model_input.name
+                for model_input in text_session.get_inputs()
+            }
+
+            provided_inputs = set(onnx_inputs.keys())
+
+            missing_inputs = required_inputs - provided_inputs
+
+            if missing_inputs:
+
+                return {
+                    "error": "Missing required ONNX inputs.",
+                    "missing_inputs": list(missing_inputs),
+                    "available_tokenizer_inputs": list(encoded.keys())
+                }
 
 
             # -------------------------------------
@@ -433,14 +459,10 @@ async def predict(
             # LABEL MAPPING
             # -------------------------------------
             #
-            # IMPORTANT:
-            # This assumes:
+            # Based on your current tested model:
             #
-            # LABEL_0 / class 0 = Fresh
-            # LABEL_1 / class 1 = Spoiled
-            #
-            # If your training used the opposite
-            # mapping, reverse these values.
+            # Class 0 = Fresh
+            # Class 1 = Spoiled
             # -------------------------------------
 
             label_map = {

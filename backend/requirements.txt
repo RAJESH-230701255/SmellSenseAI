@@ -6,3 +6,4 @@ opencv-python-headless
 onnxruntime
 Pillow
 transformers
+huggingface_hub>=0.34.0,<1.0
