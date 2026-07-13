@@ -4,6 +4,5 @@ python-multipart
 numpy
 opencv-python-headless
 onnxruntime
-pillow
-requests
-huggingface_hub
+Pillow
+transformers

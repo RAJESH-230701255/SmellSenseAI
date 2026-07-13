@@ -8,11 +8,14 @@ __pycache__/
 # Machine Learning models
 *.h5
 
-# Keep the ONNX model
+# Keep the image ONNX model
 !backend/model/model.onnx
 
-# Ignore only the DistilBERT model downloaded from Hugging Face
+# Ignore old DistilBERT model downloaded from Hugging Face
 backend/model/distilbert/
+
+# Ignore large text ONNX model for normal Git
+backend/model/text_model/distilbert_onnx/model.onnx
 
 # VS Code settings
 .vscode/
