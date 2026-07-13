@@ -20,7 +20,10 @@ from datetime import datetime
 
 app = FastAPI(
     title="SmellSense AI API",
-    description="AI-powered food freshness detection using image and text analysis",
+    description=(
+        "AI-powered food freshness detection using "
+        "image, text, and expiry-date analysis"
+    ),
     version="1.0.0"
 )
 
@@ -72,7 +75,7 @@ print("Image ONNX model loaded successfully!")
 
 
 # =================================================
-# TEXT TOKENIZER DIRECTORY
+# TEXT MODEL DIRECTORY
 # =================================================
 
 TEXT_MODEL_DIR = os.path.join(
@@ -82,11 +85,11 @@ TEXT_MODEL_DIR = os.path.join(
     "distilbert_onnx"
 )
 
-print("Text tokenizer directory:", TEXT_MODEL_DIR)
+print("Text model directory:", TEXT_MODEL_DIR)
 
 if not os.path.isdir(TEXT_MODEL_DIR):
     raise FileNotFoundError(
-        f"Text tokenizer directory not found: {TEXT_MODEL_DIR}"
+        f"Text model directory not found: {TEXT_MODEL_DIR}"
     )
 
 
@@ -105,49 +108,68 @@ print("Text tokenizer loaded successfully!")
 
 
 # =================================================
-# DOWNLOAD TEXT ONNX MODEL FROM HUGGING FACE
+# DOWNLOAD QUANTIZED TEXT ONNX MODEL
+# FROM HUGGING FACE
 # =================================================
 
-print("Downloading/loading text ONNX model from Hugging Face...")
+print(
+    "Downloading/loading quantized text ONNX model "
+    "from Hugging Face..."
+)
 
 TEXT_ONNX_PATH = hf_hub_download(
     repo_id="Rajesh282002/smellsense-distilbert",
-    filename="model.onnx"
+    filename="model_quantized.onnx"
 )
 
-print("Text ONNX model path:", TEXT_ONNX_PATH)
+print(
+    "Quantized text ONNX model path:",
+    TEXT_ONNX_PATH
+)
 
 
 # =================================================
-# LOAD TEXT ONNX MODEL
+# LOAD QUANTIZED TEXT ONNX MODEL
 # =================================================
 
-print("Loading text ONNX model into ONNX Runtime...")
+print(
+    "Loading quantized text ONNX model "
+    "into ONNX Runtime..."
+)
 
 text_session = ort.InferenceSession(
     TEXT_ONNX_PATH,
     providers=["CPUExecutionProvider"]
 )
 
-print("Text ONNX model loaded successfully!")
+print(
+    "Quantized text ONNX model loaded successfully!"
+)
 
 
 # =================================================
-# DEBUG: PRINT TEXT MODEL INPUTS AND OUTPUTS
+# DEBUG: PRINT TEXT MODEL INPUTS
 # =================================================
 
 print("\nText model inputs:")
 
 for model_input in text_session.get_inputs():
+
     print(
         f"Name: {model_input.name}, "
         f"Shape: {model_input.shape}, "
         f"Type: {model_input.type}"
     )
 
+
+# =================================================
+# DEBUG: PRINT TEXT MODEL OUTPUTS
+# =================================================
+
 print("\nText model outputs:")
 
 for model_output in text_session.get_outputs():
+
     print(
         f"Name: {model_output.name}, "
         f"Shape: {model_output.shape}, "
@@ -161,11 +183,19 @@ for model_output in text_session.get_outputs():
 
 def preprocess(image):
 
-    image = cv2.resize(image, (224, 224))
+    image = cv2.resize(
+        image,
+        (224, 224)
+    )
 
-    image = image.astype(np.float32) / 255.0
+    image = image.astype(
+        np.float32
+    ) / 255.0
 
-    image = np.expand_dims(image, axis=0)
+    image = np.expand_dims(
+        image,
+        axis=0
+    )
 
     return image
 
@@ -176,18 +206,31 @@ def preprocess(image):
 
 def softmax(logits):
 
-    logits = np.asarray(logits, dtype=np.float32)
+    logits = np.asarray(
+        logits,
+        dtype=np.float32
+    )
 
     # Numerically stable softmax
     exp_values = np.exp(
-        logits - np.max(logits, axis=-1, keepdims=True)
+        logits
+        - np.max(
+            logits,
+            axis=-1,
+            keepdims=True
+        )
     )
 
-    return exp_values / np.sum(
-        exp_values,
-        axis=-1,
-        keepdims=True
+    probabilities = (
+        exp_values
+        / np.sum(
+            exp_values,
+            axis=-1,
+            keepdims=True
+        )
     )
+
+    return probabilities
 
 
 # =================================================
@@ -200,7 +243,7 @@ def home():
     return {
         "message": "Food Freshness API is running 🚀",
         "image_model": "loaded",
-        "text_model": "loaded"
+        "text_model": "INT8 quantized ONNX loaded"
     }
 
 
@@ -213,9 +256,18 @@ def health():
 
     return {
         "status": "healthy",
-        "image_model_loaded": image_session is not None,
-        "text_model_loaded": text_session is not None,
-        "tokenizer_loaded": tokenizer is not None
+        "image_model_loaded": (
+            image_session is not None
+        ),
+        "text_model_loaded": (
+            text_session is not None
+        ),
+        "tokenizer_loaded": (
+            tokenizer is not None
+        ),
+        "text_model_type": (
+            "INT8 quantized ONNX"
+        )
     }
 
 
@@ -251,7 +303,9 @@ async def predict(
         if not has_file and not has_text:
 
             return {
-                "error": "Provide either an image or text."
+                "error": (
+                    "Provide either an image or text."
+                )
             }
 
 
@@ -271,21 +325,34 @@ async def predict(
 
             input_data = preprocess(image)
 
-            # Automatically get actual image model input name
-            image_input_name = image_session.get_inputs()[0].name
+            # Automatically get the actual
+            # image-model input name
+            image_input_name = (
+                image_session
+                .get_inputs()[0]
+                .name
+            )
 
-            prediction_output = image_session.run(
-                None,
-                {
-                    image_input_name: input_data
-                }
+            prediction_output = (
+                image_session.run(
+                    None,
+                    {
+                        image_input_name:
+                        input_data
+                    }
+                )
             )
 
             prediction = float(
-                np.asarray(prediction_output[0]).flatten()[0]
+                np.asarray(
+                    prediction_output[0]
+                ).flatten()[0]
             )
 
-            print("Image Prediction:", prediction)
+            print(
+                "Image Prediction:",
+                prediction
+            )
 
             if prediction < 0.5:
 
@@ -299,19 +366,17 @@ async def predict(
 
                 result = "Spoiled"
 
-                confidence = prediction * 100
+                confidence = (
+                    prediction * 100
+                )
 
             return {
-
                 "analysis_type": "image",
-
                 "result": result,
-
                 "confidence": round(
                     confidence,
                     2
                 ),
-
                 "score": round(
                     confidence,
                     2
@@ -355,15 +420,19 @@ async def predict(
 
             onnx_inputs = {}
 
-            for model_input in text_session.get_inputs():
+            for model_input in (
+                text_session.get_inputs()
+            ):
 
-                input_name = model_input.name
+                input_name = (
+                    model_input.name
+                )
 
                 if input_name not in encoded:
 
                     print(
-                        f"Skipping unavailable input: "
-                        f"{input_name}"
+                        "Skipping unavailable "
+                        f"input: {input_name}"
                     )
 
                     continue
@@ -372,19 +441,31 @@ async def predict(
                     encoded[input_name]
                 )
 
-                if "int64" in model_input.type:
+                if (
+                    "int64"
+                    in model_input.type
+                ):
 
-                    input_array = input_array.astype(
-                        np.int64
+                    input_array = (
+                        input_array.astype(
+                            np.int64
+                        )
                     )
 
-                elif "int32" in model_input.type:
+                elif (
+                    "int32"
+                    in model_input.type
+                ):
 
-                    input_array = input_array.astype(
-                        np.int32
+                    input_array = (
+                        input_array.astype(
+                            np.int32
+                        )
                     )
 
-                onnx_inputs[input_name] = input_array
+                onnx_inputs[
+                    input_name
+                ] = input_array
 
 
             print(
@@ -394,29 +475,41 @@ async def predict(
 
 
             # -------------------------------------
-            # VERIFY ALL REQUIRED INPUTS EXIST
+            # VERIFY REQUIRED INPUTS
             # -------------------------------------
 
             required_inputs = {
                 model_input.name
-                for model_input in text_session.get_inputs()
+                for model_input
+                in text_session.get_inputs()
             }
 
-            provided_inputs = set(onnx_inputs.keys())
+            provided_inputs = set(
+                onnx_inputs.keys()
+            )
 
-            missing_inputs = required_inputs - provided_inputs
+            missing_inputs = (
+                required_inputs
+                - provided_inputs
+            )
 
             if missing_inputs:
 
                 return {
-                    "error": "Missing required ONNX inputs.",
-                    "missing_inputs": list(missing_inputs),
-                    "available_tokenizer_inputs": list(encoded.keys())
+                    "error": (
+                        "Missing required "
+                        "ONNX inputs."
+                    ),
+                    "missing_inputs": list(
+                        missing_inputs
+                    ),
+                    "available_tokenizer_inputs":
+                        list(encoded.keys())
                 }
 
 
             # -------------------------------------
-            # RUN TEXT MODEL
+            # RUN QUANTIZED TEXT MODEL
             # -------------------------------------
 
             outputs = text_session.run(
@@ -424,16 +517,23 @@ async def predict(
                 onnx_inputs
             )
 
-            logits = np.asarray(outputs[0])
+            logits = np.asarray(
+                outputs[0]
+            )
 
-            print("Raw logits:", logits)
+            print(
+                "Raw logits:",
+                logits
+            )
 
 
             # -------------------------------------
             # CALCULATE PROBABILITIES
             # -------------------------------------
 
-            probabilities = softmax(logits)
+            probabilities = softmax(
+                logits
+            )
 
             print(
                 "Probabilities:",
@@ -459,8 +559,6 @@ async def predict(
             # LABEL MAPPING
             # -------------------------------------
             #
-            # Based on your current tested model:
-            #
             # Class 0 = Fresh
             # Class 1 = Spoiled
             # -------------------------------------
@@ -483,24 +581,27 @@ async def predict(
             if result == "Fresh":
 
                 recommendation = (
-                    "The food appears fresh based "
-                    "on the provided description."
+                    "The food appears fresh "
+                    "based on the provided "
+                    "description."
                 )
 
             elif result == "Spoiled":
 
                 recommendation = (
                     "The food may be spoiled. "
-                    "Avoid consuming it if there are "
-                    "signs of mold, rotten smell, "
-                    "slimy texture, or unusual appearance."
+                    "Avoid consuming it if there "
+                    "are signs of mold, rotten "
+                    "smell, slimy texture, or "
+                    "unusual appearance."
                 )
 
             else:
 
                 recommendation = (
-                    "Unable to provide a specific "
-                    "freshness recommendation."
+                    "Unable to provide a "
+                    "specific freshness "
+                    "recommendation."
                 )
 
 
@@ -509,31 +610,34 @@ async def predict(
             # -------------------------------------
 
             return {
-
                 "analysis_type": "text",
-
                 "result": result,
-
                 "confidence": round(
                     confidence,
                     2
                 ),
-
                 "score": round(
                     confidence,
                     2
                 ),
-
-                "predicted_class": predicted_class,
-
-                "recommendation": recommendation
+                "predicted_class":
+                    predicted_class,
+                "model_type":
+                    "INT8 quantized ONNX",
+                "recommendation":
+                    recommendation
             }
 
 
     except Exception as e:
 
         print("\nPrediction error:")
-        print(type(e).__name__, ":", str(e))
+
+        print(
+            type(e).__name__,
+            ":",
+            str(e)
+        )
 
         return {
             "error": "Prediction failed.",
@@ -549,9 +653,7 @@ async def predict(
 async def predict_expiry(
 
     product_name: str = Form(...),
-
     manufacturing_date: str = Form(...),
-
     expiry_date: str = Form(...)
 
 ):
@@ -636,19 +738,16 @@ async def predict_expiry(
         # -----------------------------------------
 
         return {
-
             "product": product_name,
-
             "result": result,
-
             "freshness_score": round(
                 freshness_score,
                 2
             ),
-
-            "remaining_days": remaining_days,
-
-            "total_shelf_life": total_shelf_life
+            "remaining_days":
+                remaining_days,
+            "total_shelf_life":
+                total_shelf_life
         }
 
 
