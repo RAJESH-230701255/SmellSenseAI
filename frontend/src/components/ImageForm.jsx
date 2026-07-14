@@ -19,46 +19,67 @@ function ImageForm() {
 
     const handleFile = (e) => {
 
-    const file = e.target.files[0];
+        const file = e.target.files[0];
 
-    if(file){
+        if (file) {
 
-        setSelectedFile(file);
-        setFileName(file.name);
-        setPreview(URL.createObjectURL(file));
+            setSelectedFile(file);
+            setFileName(file.name);
+            setPreview(URL.createObjectURL(file));
 
-    }
-
+            // Clear previous prediction
+            setResult(null);
+        }
     };
 
     const handleAnalyze = async () => {
 
-    if (!selectedFile) {
-        alert("Please select an image first.");
-        return;
-    }
+        if (!selectedFile) {
+            alert("Please select an image first.");
+            return;
+        }
 
-    const formData = new FormData();
-    formData.append("file", selectedFile);
+        try {
 
-    try {
+            setLoading(true);
+            setResult(null);
 
-        setLoading(true);
+            const formData = new FormData();
 
-        const response = await api.post("/predict", formData);
+            formData.append("file", selectedFile);
 
-        setResult(response.data);
+            const response = await api.post(
+                "/predict",
+                formData
+            );
 
-    } catch (error) {
+            console.log(
+                "Image prediction response:",
+                response.data
+            );
 
-        console.error(error);
-        alert("Prediction failed.");
+            setResult(response.data);
 
-    } finally {
+        } catch (error) {
 
-        setLoading(false);
+            console.error(
+                "Image analysis error:",
+                error
+            );
 
-    }
+            const errorMessage =
+                error.response?.data?.error ||
+                error.message ||
+                "Prediction failed";
+
+            alert(
+                "Prediction Failed: " + errorMessage
+            );
+
+        } finally {
+
+            setLoading(false);
+        }
     };
 
     return (
@@ -76,7 +97,7 @@ function ImageForm() {
                 onClick={handleClick}
             >
 
-                <FaCloudUploadAlt className="upload-icon"/>
+                <FaCloudUploadAlt className="upload-icon" />
 
                 <h3>Drag & Drop Image</h3>
 
@@ -86,7 +107,7 @@ function ImageForm() {
 
                 <input
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/jpg"
                     ref={fileInputRef}
                     onChange={handleFile}
                     hidden
@@ -94,79 +115,75 @@ function ImageForm() {
 
             </div>
 
-            {
+            {preview && (
 
-preview &&
+                <div className="preview-box">
 
-<div className="preview-box">
+                    <img
+                        src={preview}
+                        alt="Selected food preview"
+                    />
 
-    <img
+                </div>
 
-        src={preview}
+            )}
 
-        alt="preview"
+            <div className="selected-file">
 
-    />
+                {fileName
+                    ? <>✅ {fileName}</>
+                    : <>No image selected</>
+                }
 
-</div>
+            </div>
 
-}
-
-<div className="selected-file">
-
-    {
-
-        fileName
-
-        ?
-
-        <>✅ {fileName}</>
-
-        :
-
-        <>No image selected</>
-
-    }
-
-        </div>
-
-            <button className="analyze-btn" onClick={handleAnalyze}>
-                {loading ? "Analyzing..." : "Analyze Image"}
-
+            <button
+                className="analyze-btn"
+                onClick={handleAnalyze}
+                disabled={loading}
+            >
+                {loading
+                    ? "Analyzing..."
+                    : "Analyze Image"
+                }
             </button>
 
-            {
-    result && (
+            {result && (
 
-        <div className="result-box">
+                <div className="result-box">
 
-            <h3>Prediction Result</h3>
+                    <h3>Prediction Result</h3>
 
-            <p>
-                <strong>Result:</strong> {result.result}
-            </p>
+                    <p>
+                        <strong>Result:</strong>{" "}
+                        {result.result}
+                    </p>
 
-            <p>
-                <strong>Confidence:</strong> {result.confidence}
-            </p>
+                    <p>
+                        <strong>Confidence:</strong>{" "}
+                        {result.confidence}%
+                    </p>
 
-            <p>
-                <strong>Score:</strong> {result.score}
-            </p>
+                    <p>
+                        <strong>Score:</strong>{" "}
+                        {result.score}%
+                    </p>
 
-            <p>
-                <strong>Recommendation:</strong> {result.recommendation}
-            </p>
+                    {result.recommendation && (
+
+                        <p>
+                            <strong>Recommendation:</strong>{" "}
+                            {result.recommendation}
+                        </p>
+
+                    )}
+
+                </div>
+
+            )}
 
         </div>
-
-    )
-}
-
-        </div>
-
     );
-
 }
 
 export default ImageForm;

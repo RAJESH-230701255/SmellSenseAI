@@ -22,31 +22,74 @@ function ExpiryDateForm() {
             return;
         }
 
+        if (
+            new Date(expiryDate) <=
+            new Date(manufacturingDate)
+        ) {
+            alert(
+                "Expiry date must be after the manufacturing date."
+            );
+            return;
+        }
+
         try {
 
             setLoading(true);
+            setResult(null);
 
             const formData = new FormData();
 
-            formData.append("product_name", productName);
-            formData.append("manufacturing_date", manufacturingDate);
-            formData.append("expiry_date", expiryDate);
+            formData.append(
+                "product_name",
+                productName.trim()
+            );
 
-            const response = await api.post("/predict-expiry", formData);
+            formData.append(
+                "manufacturing_date",
+                manufacturingDate
+            );
+
+            formData.append(
+                "expiry_date",
+                expiryDate
+            );
+
+            const response = await api.post(
+                "/predict-expiry",
+                formData
+            );
+
+            console.log(
+                "Expiry prediction response:",
+                response.data
+            );
+
+            if (response.data.error) {
+                throw new Error(response.data.error);
+            }
 
             setResult(response.data);
 
         } catch (err) {
 
-            console.error(err);
-            alert("Prediction Failed");
+            console.error(
+                "Expiry analysis error:",
+                err
+            );
+
+            const errorMessage =
+                err.response?.data?.error ||
+                err.message ||
+                "Prediction failed";
+
+            alert(
+                "Prediction Failed: " + errorMessage
+            );
 
         } finally {
 
             setLoading(false);
-
         }
-
     };
 
     return (
@@ -64,7 +107,10 @@ function ExpiryDateForm() {
                 className="description-box"
                 placeholder="Product Name (e.g. Milk)"
                 value={productName}
-                onChange={(e) => setProductName(e.target.value)}
+                onChange={(e) =>
+                    setProductName(e.target.value)
+                }
+                disabled={loading}
             />
 
             <br /><br />
@@ -77,7 +123,10 @@ function ExpiryDateForm() {
                 type="date"
                 className="description-box"
                 value={manufacturingDate}
-                onChange={(e) => setManufacturingDate(e.target.value)}
+                onChange={(e) =>
+                    setManufacturingDate(e.target.value)
+                }
+                disabled={loading}
             />
 
             <br /><br />
@@ -90,7 +139,10 @@ function ExpiryDateForm() {
                 type="date"
                 className="description-box"
                 value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
+                onChange={(e) =>
+                    setExpiryDate(e.target.value)
+                }
+                disabled={loading}
             />
 
             <br /><br />
@@ -98,8 +150,12 @@ function ExpiryDateForm() {
             <button
                 className="analyze-btn"
                 onClick={handleAnalyze}
+                disabled={loading}
             >
-                {loading ? "Analyzing..." : "Analyze"}
+                {loading
+                    ? "Analyzing..."
+                    : "Analyze"
+                }
             </button>
 
             {result && (
@@ -108,39 +164,52 @@ function ExpiryDateForm() {
 
                     <h3>Prediction Result</h3>
 
-                    <p><strong>🧾 Product:</strong> {result.product}</p>
+                    <p>
+                        <strong>🧾 Product:</strong>{" "}
+                        {result.product}
+                    </p>
 
                     <p>
                         <strong>Status:</strong>{" "}
+
                         <span
-                        style={{
-                            color:
-                                result.result === "Fresh"
-                                    ? "green"
-                                    : result.result === "Near Expiry"
-                                    ? "orange"
-                                    : "red",
-                            fontWeight: "bold",
-                            fontSize: "18px"
-                        }}>
-                        {result.result}
+                            style={{
+                                color:
+                                    result.result === "Fresh"
+                                        ? "green"
+                                        : result.result === "Near Expiry"
+                                        ? "orange"
+                                        : "red",
+
+                                fontWeight: "bold",
+                                fontSize: "18px"
+                            }}
+                        >
+                            {result.result}
                         </span>
                     </p>
 
-                    <p><strong>Freshness Score:</strong> {result.freshness_score}%</p>
+                    <p>
+                        <strong>Freshness Score:</strong>{" "}
+                        {result.freshness_score}%
+                    </p>
 
-                    <p><strong>Remaining Days:</strong> {result.remaining_days} day(s)</p>
+                    <p>
+                        <strong>Remaining Days:</strong>{" "}
+                        {result.remaining_days} day(s)
+                    </p>
 
-                    <p><strong>Total Shelf Life:</strong> {result.total_shelf_life} day(s)</p>
+                    <p>
+                        <strong>Total Shelf Life:</strong>{" "}
+                        {result.total_shelf_life} day(s)
+                    </p>
 
                 </div>
 
             )}
 
         </div>
-
     );
-
 }
 
 export default ExpiryDateForm;

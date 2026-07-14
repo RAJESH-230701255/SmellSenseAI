@@ -1,4 +1,5 @@
 import { useState } from "react";
+import api from "../api/api";
 import "../styles/form.css";
 
 function TextAnalysisForm() {
@@ -19,31 +20,31 @@ function TextAnalysisForm() {
             setLoading(true);
             setResult(null);
 
-            const response = await fetch("/api/predict-text", {
-                method: "POST",
+            // Create FormData because FastAPI expects Form(...)
+            const formData = new FormData();
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+            formData.append("text", text.trim());
 
-                body: JSON.stringify({
-                    text: text
-                })
-            });
+            // Send text directly to Render FastAPI backend
+            const response = await api.post(
+                "/predict",
+                formData
+            );
 
-            const data = await response.json();
+            console.log("Text prediction response:", response.data);
 
-            if (!response.ok) {
-                console.error("Prediction error:", data);
-                throw new Error(data.error || "Prediction failed");
-            }
-
-            setResult(data);
+            setResult(response.data);
 
         } catch (err) {
 
             console.error("Text analysis error:", err);
-            alert("Prediction Failed: " + err.message);
+
+            const errorMessage =
+                err.response?.data?.error ||
+                err.message ||
+                "Prediction failed";
+
+            alert("Prediction Failed: " + errorMessage);
 
         } finally {
 
@@ -68,6 +69,7 @@ function TextAnalysisForm() {
                 placeholder="Example: The banana has black spots and smells rotten."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
+                disabled={loading}
             />
 
             <button
@@ -95,6 +97,13 @@ function TextAnalysisForm() {
                     <p>
                         <strong>Score:</strong> {result.score}%
                     </p>
+
+                    {result.model_type && (
+                        <p>
+                            <strong>Model:</strong>{" "}
+                            {result.model_type}
+                        </p>
+                    )}
 
                     {result.recommendation && (
                         <p>
